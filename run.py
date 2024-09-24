@@ -11,9 +11,11 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
 
 from prompts import SYSTEM_PROMPT, SYSTEM_PROMPT_TEXT_ONLY
-from openai import OpenAI
+from openai import OpenAI, AzureOpenAI
 from utils import get_web_element_rect, encode_image, extract_information, print_message,\
     get_webarena_accessibility_tree, get_pdf_retrieval_ans_from_assistant, clip_message_and_obs, clip_message_and_obs_text_only
 
@@ -52,7 +54,9 @@ def driver_config(args):
             "plugins.always_open_pdf_externally": True
         }
     )
-    return options
+    service = Service(ChromeDriverManager().install())
+
+    return options, service
 
 
 def format_msg(it, init_msg, pdf_obs, warn_obs, web_img_b64, web_text):
@@ -119,12 +123,12 @@ def call_gpt4v_api(args, openai_client, messages):
     while True:
         try:
             if not args.text_only:
-                logging.info('Calling gpt4v API...')
+                logging.info(f'Calling {args.api_model} API...')
                 openai_response = openai_client.chat.completions.create(
                     model=args.api_model, messages=messages, max_tokens=1000, seed=args.seed
                 )
             else:
-                logging.info('Calling gpt4 API...')
+                logging.info(f'Calling {args.api_model} API...')
                 openai_response = openai_client.chat.completions.create(
                     model=args.api_model, messages=messages, max_tokens=1000, seed=args.seed, timeout=30
                 )
@@ -254,9 +258,14 @@ def main():
     args = parser.parse_args()
 
     # OpenAI client
-    client = OpenAI(api_key=args.api_key)
+    client = AzureOpenAI(
+        api_key=args.api_key,
+        azure_endpoint = "https://api-ai-sandbox.princeton.edu",   
+        api_version="2024-02-01"
+        )
 
-    options = driver_config(args)
+    options, service = driver_config(args)
+
 
     # Save Result file
     current_time = time.strftime("%Y%m%d_%H_%M_%S", time.localtime())
@@ -277,7 +286,7 @@ def main():
         setup_logger(task_dir)
         logging.info(f'########## TASK{task["id"]} ##########')
 
-        driver_task = webdriver.Chrome(options=options)
+        driver_task = webdriver.Chrome(options=options, service=service)
 
         # About window size, 765 tokens
         # You can resize to height = 512 by yourself (255 tokens, Maybe bad performance)
