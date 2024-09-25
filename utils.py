@@ -344,6 +344,23 @@ def get_webarena_accessibility_tree(browser, save_file=None):
 
     return content, obs_nodes_info
 
+def save_webpage_html(browser, save_file=None):
+    """
+    Save the complete HTML of the current webpage.
+    
+    :param browser: The browser instance (assumed to be a Selenium WebDriver)
+    :param save_file: The file path where the HTML should be saved
+    """
+    # Get the page source (complete HTML)
+    html_content = browser.page_source
+    
+    # Save the HTML content to a file
+    if save_file:
+        with open(save_file + '.html', 'w', encoding='utf-8') as f:
+            f.write(html_content)
+    
+        print(f"Complete HTML saved to {save_file}")
+
 
 def compare_images(img1_path, img2_path):
     img1 = Image.open(img1_path)
